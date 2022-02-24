@@ -21,7 +21,7 @@ function ctrl_c(){
 
 # Variables globales
 unconfirmed_transactions="https://www.blockchain.com/es/btc/unconfirmed-transactions"
-inspect_trasaction_url="https://www.blockchain.com/es/btc/tx/"
+inspect_transaction_url="https://www.blockchain.com/btc/tx/"
 inspect_address_url="https://www.bloackchain.com/es/btc/address"
 
 function printTable(){
@@ -119,11 +119,28 @@ function helpPanel(){
 	echo -e "\t\t${purpleColour}unconfirmed_trasactions${endColour}${yelloColour}:\t Listar transacciones no confirmadas${endColour}"
 	echo -e "\t\t${purpleColour}inspect${endColour}${yelowColour}:\t\t\t Inspeccionar un hash de transaccións${endColour}"
 	echo -e "\t\t${purpleColour}address${endColour}${yelowColour}:\t\t\t Inspeccionar una trasacción de dirección${endColour}"
-	echo -e "\n\t${grayColour}[-n]${endColour}${yellowColour}Limitar el número de resultados${endColour}${blueColour} (Ejemplo_ -n 10)${endColour}"
+	echo -e "\n\t${grayColour}[-n]${endColour}${yellowColour}Limitar el número de resultados${endColour}${blueColour} (Ejemplo -n 10)${endColour}"
+	echo -e "\n\t${grayColour}[-i]${}endColour}${yellowColour}Proporcionar el identificador de transacción.${endColour}${blueColour} (Ejemplo -i) ba30wjka0231230213l2212313${endColour}"
 	echo -e "\n\n\t${grayColour}[-h]${encColour}${yellowColour} Mostrar este panel de ayuda${endColour}\n"
 
 	tput cnorm; exit 1
 
+}
+
+function inspectTransaction(){
+	
+	inspect_transaction=$1
+
+	echo "Entrada Total_Salida Total" > total_entrada_salida.tmp
+
+	while [ "$(cat total_entrada_salida.tmp | wc -l)" == "1" ]; do
+		echo "${inspect_transaction_url}${inspect_transaction}"
+		curl "${inspect_transaction_url}${inspect_transaction}" | html2text | grep -E "Total Input|Total Output" -A 1 | grep -v -E "Total Input|Total Output" | xargs | tr ' ' '_' | sed 's/_BTC/ BTC/g'  >> total_entrada_salida.tmp
+	done
+
+	echo -ne "${grayColour}"
+	printTable '_' "$(cat total_entrada_salida.tmp)"
+	rm total_entrada_salida.tmp 2>/dev/null
 }
 
 function unconfirmedtransactions(){
@@ -153,7 +170,7 @@ function unconfirmedtransactions(){
 		echo $money > money.tmp
 	done; 
 
-	echo "Cantidad total_ " > amount.table
+	echo -n "Cantidad total_ " > amount.table
 	echo "\$$(printf "%'.d\n" $(cat money.tmp))" >> amount.table
 
 	if [ "$(cat ut.table | wc -l)" != "1" ]; then
@@ -172,10 +189,11 @@ function unconfirmedtransactions(){
 	tput cnorm;
 }
 
-parameter_counter=0; while getopts "e:n:h" arg; do
+parameter_counter=0; while getopts "e:n:i:h" arg; do
 	case $arg in
 		e) exploration_mode=$OPTARG; let parameter_counter+=1;;
 		n) number_output=$OPTARG; let parameter_counter+=1;;
+		i) inspect_transaction=$OPTARG; let parameter_counter+=1;;
 		h) helpPanel;;
 	esac
 done
@@ -194,8 +212,8 @@ else
 
 		unconfirmedtransactions ${number_output}
 				
-	else
-		echo "mal"
+	elif [ ${exploration_mode} == "inspect" ];  then
+		inspectTransaction $inspect_transaction
 	fi
 
 fi
